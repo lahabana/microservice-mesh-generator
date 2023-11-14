@@ -1,0 +1,186 @@
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Microservice Mesh Generator
+  license:
+    name: MIT
+  description: A simple API to generate meshes of microservices
+  contact:
+    email: charly.molter@konghq.com
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: base
+paths:
+  /ready:
+    get:
+      tags: ["base"]
+      summary: healthcheck
+      description: healthcheck
+      operationId: ready
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /health:
+    get:
+      tags: [ "base" ]
+      summary: healthcheck
+      description: healthcheck
+      operationId: health
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /api:
+    get:
+      tags: ["base"]
+      summary: home
+      description: home
+      operationId: home
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeResponse'
+  /api/random.{format}:
+    get:
+      tags: ["base"]
+      summary: "generate a random mesh"
+      description: "generate a random mesh"
+      operationId: GenerateRandom
+      parameters:
+        - in: path
+          name: format
+          schema:
+            type: string
+            options: ["mmd", "gv", "yaml", "json"]
+        - in: query
+          name: k8sApp
+          schema:
+            type: string
+            options: ["api-play", "fake-service"]
+          description: The app to use
+        - in: query
+          name: k8sNamespace
+          schema:
+            type: string
+          description: the namespace to use
+        - in: query
+          name: seed
+          schema:
+            type: number
+            x-go-type: int64
+          description: the seed to use for deterministic randomness
+        - in: query
+          name: k8s
+          schema:
+            type: boolean
+          description: whether or not to return kubernetes manifest
+        - in: query
+          name: numServices
+          schema:
+            default: 5
+            type: int
+            x-go-type: int
+          description: number of services to run
+        - in: query
+          name: minReplicas
+          schema:
+            default: 2
+            type: int
+            x-go-type: int
+          description: minimum number of replicas per service
+        - in: query
+          name: maxReplicas
+          schema:
+            default: 2
+            type: int
+            x-go-type: int
+          description: maximum number of replicas per service
+        - in: query
+          name: percentEdge
+          schema:
+            type: int
+            x-go-type: int
+            default: 50
+            minimum: 0
+            maximum: 100
+          description: maximum number of replicas per service
+
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RandomMeshResponse'
+            application/yaml:
+              schema:
+                $ref: '#/components/schemas/RandomMeshResponse'
+            text/vnd.mermaid:
+              schema:
+                type: string
+            text/vnd.graphviz:
+              schema:
+                type: string
+
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [status, details]
+      properties:
+        status:
+          type: number
+          x-go-type: int
+        details:
+          type: string
+        invalid_parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvalidParameter'
+    InvalidParameter:
+      type: object
+      required: [field, reason]
+      properties:
+        field:
+          type: string
+        reason:
+          type: string
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: number
+          x-go-type: int
+    HomeResponse:
+      type: object
+      required: [ version, hostname, commit, target ]
+      properties:
+        version:
+          type: string
+        hostname:
+          type: string
+        commit:
+          type: string
+        target:
+          type: string
+    RandomMeshResponse:
+      type: object
+      properties: {}

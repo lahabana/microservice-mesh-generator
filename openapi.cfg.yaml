@@ -1,0 +1,6 @@
+package: restapi
+output: internal/restapi/openapi.gen.go
+generate:
+  - gin-server
+  - types
+  - models

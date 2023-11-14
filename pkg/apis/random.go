@@ -1,20 +1,19 @@
-package random
+package apis
 
 import (
-	"github.com/lahabana/microservice-mesh-generator/pkg/apis"
 	"math/rand"
 )
 
 // GenerateRandomMesh creates a mesh of some instances with some replicas.
-func GenerateRandomMesh(seed int64, numServices, percentEdges, minReplicas, maxReplicas int) apis.ServiceGraph {
+func GenerateRandomMesh(seed int64, numServices, percentEdges, minReplicas, maxReplicas int) ServiceGraph {
 	r := rand.New(rand.NewSource(seed))
-	srvs := apis.ServiceGraph{}
+	srvs := ServiceGraph{}
 	for i := 0; i < numServices; i++ {
 		numInstances := 1
 		if maxReplicas >= minReplicas {
 			numInstances = (r.Int() % (1 + maxReplicas - minReplicas)) + minReplicas
 		}
-		srvs.Services = append(srvs.Services, apis.Service{Idx: i, Replicas: numInstances})
+		srvs.Services = append(srvs.Services, Service{Idx: i, Replicas: numInstances})
 	}
 	// That's the whole story of DAG and topological sort with triangular matrix.
 	for i := 0; i < numServices; i++ {
