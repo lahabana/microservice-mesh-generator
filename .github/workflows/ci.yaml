@@ -1,0 +1,87 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          args: --fix=false --verbose
+          version: v1.54.1
+      - run: |
+          go mod tidy
+          go generate ./...
+      - run:
+          go test ./...
+      - run:
+          mkdir -p build/linux/{arm64,amd64}
+      - name: build
+        run: |
+          for arch in amd64 arm64; do
+            echo "Building for ${arch}"
+            CGO_ENABLED=0 GOOS=linux GOARCH=${arch} go build \
+              -ldflags="-X github.com/lahabana/microservice-mesh-generator/pkg/version.Commit=${{ github.sha }} -X github.com/lahabana/microservice-mesh-generator/pkg/version.Version=${{ github.ref_name }}" \
+              -v -o build/linux/${arch}/${{github.repository_name}}
+          done
+      - name: check if diff
+        run: |
+          git diff --no-ext-diff --exit-code
+      - uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: build
+  images:
+    needs: [check]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: build
+          path: build
+      - run: |
+          chmod u+x build/linux/*/${{github.repository_name}}
+      - uses: docker/setup-qemu-action@v3
+      - id: buildx
+        uses:
+          docker/setup-buildx-action@v3
+      - if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}
+          labels: |
+            org.opencontainers.image.title=lahabana ${{github.repository_name}}
+            org.opencontainers.image.description=A way to generate microservice meshes
+          # Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=sha
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: Dockerfile

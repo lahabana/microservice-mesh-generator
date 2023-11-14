@@ -18,13 +18,13 @@ type ServiceGraph struct {
 
 // Generator generates the graph is a custom format
 type Generator interface {
-	Encode(writer io.Writer, svc ServiceGraph) error
+	Apply(writer io.Writer, svc ServiceGraph) error
 }
 
 // GeneratorFunc a shorthand for a regular generator
 type GeneratorFunc func(writer io.Writer, svc ServiceGraph) error
 
-func (f GeneratorFunc) Encode(writer io.Writer, svc ServiceGraph) error {
+func (f GeneratorFunc) Apply(writer io.Writer, svc ServiceGraph) error {
 	return f(writer, svc)
 }
 

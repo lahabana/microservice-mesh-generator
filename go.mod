@@ -1,8 +1,9 @@
 module github.com/lahabana/microservice-mesh-generator
 
-go 1.21.1
+go 1.21.4
 
 require (
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	sigs.k8s.io/yaml v1.3.0

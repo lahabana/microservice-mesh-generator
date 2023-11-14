@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"errors"
 	"fmt"
 	"github.com/lahabana/microservice-mesh-generator/pkg/apis"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,10 +17,29 @@ type generator struct {
 	asStatefulSet          bool
 	namespace              string
 	image                  string
-	baseName               string
 	port                   int32
-	configGenerator        func(svc apis.Service) (string, error)
-	podTemplateSpecMutator func(name string, svc apis.Service, template *v1.PodTemplateSpec) error
+	formatters             Formatters
+	configMapGenerator     func(formatters Formatters, svc apis.Service) (string, error)
+	podTemplateSpecMutator func(formatters Formatters, svc apis.Service, template *v1.PodTemplateSpec) error
+}
+
+type Formatters struct {
+	BaseName string
+	Name     func(idx int) string
+	Url      func(idx int, port int) string
+}
+
+func SimpleFormatters(baseName string) Formatters {
+	return Formatters{
+		BaseName: baseName,
+		Name: func(idx int) string {
+			return fmt.Sprintf("%s-%03d", baseName, idx)
+		},
+		Url: func(idx int, port int) string {
+			return fmt.Sprintf("http://%s-%03d:%d", baseName, idx, port)
+		},
+	}
+
 }
 
 type Option interface {
@@ -31,14 +51,14 @@ func (f OptionFn) Apply(g *generator) error {
 	return f(g)
 }
 
-func WithConfigGenerator(fn func(svc apis.Service) (string, error)) Option {
+func WithConfigMapGenerator(fn func(f Formatters, svc apis.Service) (string, error)) Option {
 	return OptionFn(func(g *generator) error {
-		g.configGenerator = fn
+		g.configMapGenerator = fn
 		return nil
 	})
 }
 
-func WithPodTemplateSpecMutator(fn func(name string, svc apis.Service, template *v1.PodTemplateSpec) error) Option {
+func WithPodTemplateSpecMutator(fn func(f Formatters, svc apis.Service, template *v1.PodTemplateSpec) error) Option {
 	return OptionFn(func(g *generator) error {
 		g.podTemplateSpecMutator = fn
 		return nil
@@ -52,9 +72,9 @@ func WithPort(p int) Option {
 	})
 }
 
-func WithBaseName(name string) Option {
+func WithFormatters(f Formatters) Option {
 	return OptionFn(func(g *generator) error {
-		g.baseName = name
+		g.formatters = f
 		return nil
 	})
 }
@@ -80,21 +100,12 @@ func AsStatefulSet() Option {
 	})
 }
 
-func GenericEncoder(opts ...Option) (Encoder, error) {
-	out := Encoder{
+func NewGenerator(opts ...Option) (Generator, error) {
+	out := Generator{
 		Serializer: DefaultSerializer,
 	}
 	g := &generator{
-		baseName:  "api-play",
-		port:      8080,
-		namespace: "api-play",
-		image:     "ghcr.io/lahabana/api-play:main",
-		configGenerator: func(svc apis.Service) (string, error) {
-			return "", nil
-		},
-		podTemplateSpecMutator: func(name string, svc apis.Service, template *v1.PodTemplateSpec) error {
-			return nil
-		},
+		formatters: SimpleFormatters("microservice"),
 	}
 	for _, o := range opts {
 		if err := o.Apply(g); err != nil {
@@ -125,8 +136,14 @@ func commonSetup(ns string) CommonSetupFn {
 
 }
 
-func (g generator) Generate(svc apis.Service) ([]runtime.Object, []byte, error) {
-	name := fmt.Sprintf("%s-%03d", g.baseName, svc.Idx)
+func (g generator) Apply(svc apis.Service) ([]runtime.Object, []byte, error) {
+	if g.image == "" {
+		return nil, nil, errors.New("must set an image")
+	}
+	if g.port < 0 || g.port > 65535 {
+		return nil, nil, errors.New("invalid port")
+	}
+	name := g.formatters.Name(svc.Idx)
 	baseObjectMeta := metav1.ObjectMeta{
 		Name:      name,
 		Namespace: g.namespace,
@@ -134,11 +151,6 @@ func (g generator) Generate(svc apis.Service) ([]runtime.Object, []byte, error) 
 			"app": name,
 		},
 	}
-	accessedServices := []string{}
-	for _, e := range svc.Edges {
-		accessedServices = append(accessedServices, fmt.Sprintf("%s-%03d", g.baseName, e))
-	}
-
 	var workload runtime.Object
 	podTemplateSpec := v1.PodTemplateSpec{
 		Spec: v1.PodSpec{
@@ -159,7 +171,6 @@ func (g generator) Generate(svc apis.Service) ([]runtime.Object, []byte, error) 
 					Name:            "app",
 					Image:           g.image,
 					ImagePullPolicy: v1.PullAlways,
-					Args:            []string{"-config-file", "/etc/config/config.yaml"},
 					VolumeMounts: []v1.VolumeMount{
 						{
 							Name:      "config",
@@ -198,9 +209,11 @@ func (g generator) Generate(svc apis.Service) ([]runtime.Object, []byte, error) 
 		},
 	}
 	baseObjectMeta.DeepCopyInto(&podTemplateSpec.ObjectMeta)
-	err := g.podTemplateSpecMutator(name, svc, &podTemplateSpec)
-	if err != nil {
-		return nil, nil, err
+	if g.podTemplateSpecMutator != nil {
+		err := g.podTemplateSpecMutator(g.formatters, svc, &podTemplateSpec)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	repl := int32(svc.Replicas)
@@ -273,9 +286,13 @@ func (g generator) Generate(svc apis.Service) ([]runtime.Object, []byte, error) 
 	}
 	baseObjectMeta.DeepCopyInto(&service.ObjectMeta)
 
-	conf, err := g.configGenerator(svc)
-	if err != nil {
-		return nil, nil, err
+	conf := ""
+	if g.configMapGenerator != nil {
+		var err error
+		conf, err = g.configMapGenerator(g.formatters, svc)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	configMap := &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

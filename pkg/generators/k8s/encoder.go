@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type Encoder struct {
+type Generator struct {
 	CommonSetup       CommonSetup
 	WorkloadGenerator WorkloadGenerator
 	Serializer        *json.Serializer
@@ -18,7 +18,7 @@ type Encoder struct {
 
 var DefaultSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil, json.SerializerOptions{Yaml: true, Pretty: true, Strict: true})
 
-func (e *Encoder) Encode(writer io.Writer, svc apis.ServiceGraph) error {
+func (e Generator) Apply(writer io.Writer, svc apis.ServiceGraph) error {
 	if e.CommonSetup != nil {
 		objs, raw, err := e.CommonSetup.Generate(svc)
 		if err != nil {
@@ -32,7 +32,7 @@ func (e *Encoder) Encode(writer io.Writer, svc apis.ServiceGraph) error {
 		}
 	}
 	for _, s := range svc.Services {
-		objs, raw, err := e.WorkloadGenerator.Generate(s)
+		objs, raw, err := e.WorkloadGenerator.Apply(s)
 		if err != nil {
 			return &ServiceGeneratorError{idx: s.Idx, err: err}
 		}
@@ -46,7 +46,7 @@ func (e *Encoder) Encode(writer io.Writer, svc apis.ServiceGraph) error {
 	return nil
 }
 
-func (e *Encoder) encode(writer io.Writer, inputs ...runtime.Object) error {
+func (e Generator) encode(writer io.Writer, inputs ...runtime.Object) error {
 	for _, in := range inputs {
 		_, err := writer.Write([]byte("---\n"))
 		if err != nil {
@@ -86,12 +86,12 @@ func (f CommonSetupFn) Generate(svcs apis.ServiceGraph) ([]runtime.Object, []byt
 }
 
 type WorkloadGenerator interface {
-	Generate(svc apis.Service) ([]runtime.Object, []byte, error)
+	Apply(svc apis.Service) ([]runtime.Object, []byte, error)
 }
 
 type WorkloadGeneratorFn func(svc apis.Service) ([]runtime.Object, []byte, error)
 
-func (f WorkloadGeneratorFn) Generate(svc apis.Service) ([]runtime.Object, []byte, error) {
+func (f WorkloadGeneratorFn) Apply(svc apis.Service) ([]runtime.Object, []byte, error) {
 	return f(svc)
 }
 

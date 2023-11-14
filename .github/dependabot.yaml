@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    labels:
+      - "dependencies"
+    groups:
+      go.opentelemetry.io:
+        patterns:
+          - "go.opentelemetry.io/*"
+
+  - package-ecosystem: "docker"
+    directory: "/tools/releases/dockerfiles"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    labels:
+      - "dependencies"

@@ -3,18 +3,20 @@ package fakeservice_test
 import (
 	"bytes"
 	"github.com/lahabana/microservice-mesh-generator/pkg/apis"
-	"github.com/lahabana/microservice-mesh-generator/pkg/k8s"
-	"github.com/lahabana/microservice-mesh-generator/pkg/k8s/fakeservice"
+	"github.com/lahabana/microservice-mesh-generator/pkg/generators/k8s"
+	"github.com/lahabana/microservice-mesh-generator/pkg/generators/k8s/fakeservice"
 	"testing"
 )
 
 func TestSimple(t *testing.T) {
-	encoder, err := fakeservice.Encoder(k8s.WithNamespace("bar"))
+	opts := fakeservice.GeneratorOpts()
+	opts = append(opts, k8s.WithNamespace("foo"))
+	encoder, err := k8s.NewGenerator(opts...)
 	if err != nil {
 		t.Error("failed", err)
 	}
 	buf := bytes.NewBuffer([]byte{})
-	err = encoder.Encode(buf, apis.ServiceGraph{
+	err = encoder.Apply(buf, apis.ServiceGraph{
 		Services: []apis.Service{
 			{Replicas: 2, Edges: []int{1, 2}, Idx: 0},
 			{Replicas: 2, Edges: []int{2}, Idx: 1},
