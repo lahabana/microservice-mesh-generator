@@ -22,7 +22,7 @@ func main() {
 	seed := flag.Int64("seed", time.Now().Unix(), "the seed for the random generate (set to now by default)")
 	k8sNamespace := flag.String("k8sNamespace", "microservice-mesh", "The namespace to use (only useful if output is `k8s`)")
 	k8sApp := flag.String("k8sApp", "api-play", "The app to use can be api-play or fake-service (only useful if output is `k8s`)")
-	output := flag.String("output", "yaml", "output format (k8s,dot,mermaid,yaml)")
+	output := flag.String("output", "yaml", "output format (k8s,dot,mermaid,yaml,json)")
 	flag.Parse()
 
 	commentMarker := "#"
@@ -51,8 +51,10 @@ func main() {
 		generator = apis.MermaidGenerator
 	case "yaml":
 		generator = yaml.Generator
+	case "json":
+		generator = apis.JsonGenerator
 	default:
-		panic(fmt.Errorf("format '%s' not supported accepted format: k8s, yaml, dot, mermaid", *output))
+		panic(fmt.Errorf("format '%s' not supported accepted format: k8s, yaml, dot, mermaid, json", *output))
 	}
 	serviceGraph := random.GenerateRandomMesh(*seed, *numServices, *percentEdge, *minReplicas, *maxReplicas)
 	fmt.Printf("%s name:'%s',version:'%s',commit:'%s',seed: %d\n", commentMarker, version.Name, version.Version, version.Commit, *seed)

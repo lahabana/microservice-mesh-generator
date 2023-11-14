@@ -1,6 +1,7 @@
 package apis
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -50,4 +51,9 @@ var MermaidGenerator = GeneratorFunc(func(writer io.Writer, s ServiceGraph) erro
 	}
 	_, err := fmt.Fprintf(writer, "graph TD;\n%s\n\n", strings.Join(allEdges, "\n"))
 	return err
+})
+
+// JsonGenerator outputs the service graph in json
+var JsonGenerator = GeneratorFunc(func(writer io.Writer, svc ServiceGraph) error {
+	return json.NewEncoder(writer).Encode(svc)
 })
