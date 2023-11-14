@@ -31,7 +31,7 @@ jobs:
             echo "Building for ${arch}"
             CGO_ENABLED=0 GOOS=linux GOARCH=${arch} go build \
               -ldflags="-X github.com/lahabana/microservice-mesh-generator/pkg/version.Commit=${{ github.sha }} -X github.com/lahabana/microservice-mesh-generator/pkg/version.Version=${{ github.ref_name }}" \
-              -v -o build/linux/${arch}/${{github.repository_name}}
+              -v -o build/linux/${arch}/microservice-mesh-generator
           done
       - name: check if diff
         run: |
@@ -52,7 +52,7 @@ jobs:
           name: build
           path: build
       - run: |
-          chmod u+x build/linux/*/${{github.repository_name}}
+          chmod u+x build/linux/*/microservice-mesh-generator
       - uses: docker/setup-qemu-action@v3
       - id: buildx
         uses:
@@ -67,9 +67,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
-          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}
+          images: ghcr.io/${{github.repository}}
           labels: |
-            org.opencontainers.image.title=lahabana ${{github.repository_name}}
+            org.opencontainers.image.title=${{github.repository}}
             org.opencontainers.image.description=A way to generate microservice meshes
           # Docker tags based on the following events/attributes
           tags: |
