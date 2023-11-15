@@ -51,7 +51,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HomeResponse'
-  /api/{generator}.{format}:
+  /api/random.{format}:
     get:
       tags: ["base"]
       summary: "generate a random mesh"
