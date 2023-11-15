@@ -85,7 +85,8 @@ func Run(conf Config, genFn func(seed int64) (apis.ServiceGraph, error)) error {
 		return err
 	}
 	if commentMarker != "" {
-		_, _ = fmt.Fprintf(conf.Writer, "%s name:'%s',version:'%s',commit:'%s',seed:%d\n", commentMarker, version.Name, version.Version, version.Commit, conf.Seed)
+		_, _ = fmt.Fprintf(conf.Writer, "%s runParameters=package:%s,version:%s,commit:%s,seed:%d\n", commentMarker, version.Name, version.Version, version.Commit, conf.Seed)
+		_, _ = fmt.Fprintf(conf.Writer, "%s generationParameters=%s\n", commentMarker, serviceGraph.GenerationParams)
 	}
 	return generator.Apply(conf.Writer, serviceGraph)
 }

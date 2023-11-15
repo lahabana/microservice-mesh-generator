@@ -14,7 +14,8 @@ type Service struct {
 }
 
 type ServiceGraph struct {
-	Services []Service `yaml:"services" json:"services"`
+	Services         []Service `yaml:"services" json:"services"`
+	GenerationParams string    `yaml:"generationParams" json:"generationParams"`
 }
 
 // Generator generates the graph is a custom format

@@ -11,6 +11,21 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for GenerateRandomParamsK8sApp.
+const (
+	ApiPlay     GenerateRandomParamsK8sApp = "api-play"
+	FakeService GenerateRandomParamsK8sApp = "fake-service"
+)
+
+// Defines values for GenerateRandomParamsFormat.
+const (
+	Empty GenerateRandomParamsFormat = ""
+	Gv    GenerateRandomParamsFormat = "gv"
+	Json  GenerateRandomParamsFormat = "json"
+	Mmd   GenerateRandomParamsFormat = "mmd"
+	Yaml  GenerateRandomParamsFormat = "yaml"
+)
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Details           string              `json:"details"`
@@ -43,18 +58,18 @@ type RandomMeshResponse = map[string]interface{}
 // GenerateRandomParams defines parameters for GenerateRandom.
 type GenerateRandomParams struct {
 	// K8sApp The app to use
-	K8sApp *string `form:"k8sApp,omitempty" json:"k8sApp,omitempty"`
+	K8sApp *GenerateRandomParamsK8sApp `form:"k8sApp,omitempty" json:"k8sApp,omitempty"`
 
 	// K8sNamespace the namespace to use
 	K8sNamespace *string `form:"k8sNamespace,omitempty" json:"k8sNamespace,omitempty"`
 
 	// Seed the seed to use for deterministic randomness
-	Seed *int64 `form:"seed,omitempty" json:"seed,omitempty"`
+	Seed *int `form:"seed,omitempty" json:"seed,omitempty"`
 
 	// K8s whether or not to return kubernetes manifest
 	K8s *bool `form:"k8s,omitempty" json:"k8s,omitempty"`
 
-	// NumServices number of services to run
+	// NumServices integer of services to run
 	NumServices *int `form:"numServices,omitempty" json:"numServices,omitempty"`
 
 	// MinReplicas minimum number of replicas per service
@@ -67,6 +82,12 @@ type GenerateRandomParams struct {
 	PercentEdge *int `form:"percentEdge,omitempty" json:"percentEdge,omitempty"`
 }
 
+// GenerateRandomParamsK8sApp defines parameters for GenerateRandom.
+type GenerateRandomParamsK8sApp string
+
+// GenerateRandomParamsFormat defines parameters for GenerateRandom.
+type GenerateRandomParamsFormat string
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// home
@@ -74,7 +95,7 @@ type ServerInterface interface {
 	Home(c *gin.Context)
 	// generate a random mesh
 	// (GET /api/random.{format})
-	GenerateRandom(c *gin.Context, format string, params GenerateRandomParams)
+	GenerateRandom(c *gin.Context, format GenerateRandomParamsFormat, params GenerateRandomParams)
 	// healthcheck
 	// (GET /health)
 	Health(c *gin.Context)
@@ -111,7 +132,7 @@ func (siw *ServerInterfaceWrapper) GenerateRandom(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "format" -------------
-	var format string
+	var format GenerateRandomParamsFormat
 
 	err = runtime.BindStyledParameter("simple", false, "format", c.Param("format"), &format)
 	if err != nil {

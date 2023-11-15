@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"github.com/lahabana/microservice-mesh-generator/internal/generate"
-	"github.com/lahabana/microservice-mesh-generator/internal/restapi"
+	"github.com/lahabana/microservice-mesh-generator/internal/server"
 	"github.com/lahabana/microservice-mesh-generator/pkg/apis"
 )
 
@@ -26,7 +26,7 @@ func main() {
 	if *asServer {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		err := restapi.Start(ctx)
+		err := server.Start(ctx)
 		if err != nil {
 			panic(err)
 		}

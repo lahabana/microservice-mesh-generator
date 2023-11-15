@@ -7,6 +7,13 @@ on:
 permissions:
   contents: read
 jobs:
+  lint-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: stoplightio/spectral-action@v0.8.10
+        with:
+          file_glob: openapi.yaml
   check:
     runs-on: ubuntu-latest
     steps:

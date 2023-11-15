@@ -1,4 +1,4 @@
-package restapi
+package server
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/lahabana/microservice-mesh-generator/internal/generate"
+	"github.com/lahabana/microservice-mesh-generator/internal/restapi"
 	"github.com/lahabana/microservice-mesh-generator/pkg/apis"
 	"github.com/lahabana/microservice-mesh-generator/pkg/version"
 	"github.com/lahabana/otel-gin/pkg/observability"
@@ -20,44 +21,49 @@ type srv struct {
 	l *slog.Logger
 }
 
-func (s *srv) GenerateRandom(c *gin.Context, format string, params GenerateRandomParams) {
+func (s *srv) GenerateRandom(c *gin.Context, format restapi.GenerateRandomParamsFormat, params restapi.GenerateRandomParams) {
+	var invParams []restapi.InvalidParameter
 	ctx := c.Request.Context()
 	config := generate.DefaultConfig()
 	if params.K8sApp != nil {
-		config.K8sApp = *params.K8sApp
+		config.K8sApp = string(*params.K8sApp)
 	}
 	if params.K8sNamespace != nil {
 		config.K8sNamespace = *params.K8sNamespace
 	}
 	if params.Seed != nil {
-		config.Seed = *params.Seed
+		config.Seed = int64(*params.Seed)
 	}
 	contentType := ""
 	switch format {
-	case "", "yaml":
+	case restapi.Empty, restapi.Yaml:
 		contentType = "application/yaml"
 		if params.K8s != nil && *params.K8s {
 			config.Output = "k8s"
 		} else {
 			config.Output = "yaml"
 		}
-	case "mmd":
+	case restapi.Mmd:
 		contentType = "text/vnd.mermaid"
 		config.Output = "mermaid"
-	case "gv":
+	case restapi.Gv:
 		contentType = "text/vnd.graphviz"
 		config.Output = "dot"
-	case "json":
+	case restapi.Json:
 		contentType = "application/json"
 		config.Output = "json"
+	default:
+		invParams = append(invParams, restapi.InvalidParameter{
+			Field:  "format",
+			Reason: "not a supported type",
+		})
 	}
-	var invParams []InvalidParameter
 	numServices := 5
 	if params.NumServices != nil {
 		numServices = *params.NumServices
 	}
 	if numServices <= 0 {
-		invParams = append(invParams, InvalidParameter{
+		invParams = append(invParams, restapi.InvalidParameter{
 			Field:  "numServices",
 			Reason: "can't be null or negative",
 		})
@@ -67,7 +73,7 @@ func (s *srv) GenerateRandom(c *gin.Context, format string, params GenerateRando
 		percentEdge = 50
 	}
 	if percentEdge < 0 || percentEdge > 100 {
-		invParams = append(invParams, InvalidParameter{
+		invParams = append(invParams, restapi.InvalidParameter{
 			Field:  "percentEdge",
 			Reason: "must be between 0 and 99",
 		})
@@ -77,7 +83,7 @@ func (s *srv) GenerateRandom(c *gin.Context, format string, params GenerateRando
 		minReplicas = *params.MinReplicas
 	}
 	if minReplicas <= 0 {
-		invParams = append(invParams, InvalidParameter{
+		invParams = append(invParams, restapi.InvalidParameter{
 			Field:  "minReplicas",
 			Reason: "must > 0",
 		})
@@ -87,13 +93,13 @@ func (s *srv) GenerateRandom(c *gin.Context, format string, params GenerateRando
 		maxReplicas = *params.MaxReplicas
 	}
 	if maxReplicas < minReplicas {
-		invParams = append(invParams, InvalidParameter{
+		invParams = append(invParams, restapi.InvalidParameter{
 			Field:  "maxReplicas",
 			Reason: "can't be lower than minReplicas",
 		})
 	}
 	if len(invParams) > 0 {
-		c.PureJSON(http.StatusBadRequest, ErrorResponse{
+		c.PureJSON(http.StatusBadRequest, restapi.ErrorResponse{
 			Status:            http.StatusBadRequest,
 			Details:           "Bad Request",
 			InvalidParameters: &invParams,
@@ -109,14 +115,14 @@ func (s *srv) GenerateRandom(c *gin.Context, format string, params GenerateRando
 	})
 	if err != nil {
 		if errors.Is(err, &generate.InvalidConfError{}) {
-			c.PureJSON(http.StatusBadRequest, ErrorResponse{
+			c.PureJSON(http.StatusBadRequest, restapi.ErrorResponse{
 				Status:  http.StatusBadRequest,
 				Details: err.Error(),
 			})
 			return
 		} else {
 			s.l.InfoContext(ctx, "failed request", "error", err)
-			c.PureJSON(http.StatusInternalServerError, ErrorResponse{
+			c.PureJSON(http.StatusInternalServerError, restapi.ErrorResponse{
 				Status:  http.StatusInternalServerError,
 				Details: "internal error",
 			})
@@ -128,7 +134,7 @@ func (s *srv) GenerateRandom(c *gin.Context, format string, params GenerateRando
 
 func (s *srv) Home(c *gin.Context) {
 	host, _ := os.Hostname()
-	c.PureJSON(http.StatusOK, HomeResponse{
+	c.PureJSON(http.StatusOK, restapi.HomeResponse{
 		Hostname: host,
 		Version:  version.Version,
 		Commit:   version.Commit,
@@ -137,11 +143,11 @@ func (s *srv) Home(c *gin.Context) {
 }
 
 func (s *srv) Health(c *gin.Context) {
-	c.PureJSON(http.StatusOK, Health{Status: http.StatusOK})
+	c.PureJSON(http.StatusOK, restapi.Health{Status: http.StatusOK})
 }
 
 func (s *srv) Ready(c *gin.Context) {
-	c.PureJSON(http.StatusOK, Health{Status: http.StatusOK})
+	c.PureJSON(http.StatusOK, restapi.Health{Status: http.StatusOK})
 }
 
 func Start(ctx context.Context) error {
@@ -151,6 +157,6 @@ func Start(ctx context.Context) error {
 	}
 	engine := gin.New()
 	engine.Use(gin.Recovery(), obs.Middleware())
-	RegisterHandlersWithOptions(engine, &srv{}, GinServerOptions{})
+	restapi.RegisterHandlersWithOptions(engine, &srv{}, restapi.GinServerOptions{})
 	return engine.Run()
 }

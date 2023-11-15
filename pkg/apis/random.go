@@ -1,13 +1,16 @@
 package apis
 
 import (
+	"fmt"
 	"math/rand"
 )
 
 // GenerateRandomMesh creates a mesh of some instances with some replicas.
 func GenerateRandomMesh(seed int64, numServices, percentEdges, minReplicas, maxReplicas int) ServiceGraph {
 	r := rand.New(rand.NewSource(seed))
-	srvs := ServiceGraph{}
+	srvs := ServiceGraph{
+		GenerationParams: fmt.Sprintf("name:random,seed:%d,numServices:%d,percentEdges:%d,minReplicas:%d,maxReplicas:%d", seed, numServices, percentEdges, minReplicas, maxReplicas),
+	}
 	for i := 0; i < numServices; i++ {
 		numInstances := 1
 		if maxReplicas >= minReplicas {

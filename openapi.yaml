@@ -51,7 +51,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HomeResponse'
-  /api/random.{format}:
+  /api/{generator}.{format}:
     get:
       tags: ["base"]
       summary: "generate a random mesh"
@@ -60,14 +60,15 @@ paths:
       parameters:
         - in: path
           name: format
+          required: true
           schema:
             type: string
-            options: ["mmd", "gv", "yaml", "json"]
+            enum: ["", "mmd", "gv", "yaml", "json"]
         - in: query
           name: k8sApp
           schema:
             type: string
-            options: ["api-play", "fake-service"]
+            enum: ["api-play", "fake-service"]
           description: The app to use
         - in: query
           name: k8sNamespace
@@ -77,8 +78,7 @@ paths:
         - in: query
           name: seed
           schema:
-            type: number
-            x-go-type: int64
+            type: integer
           description: the seed to use for deterministic randomness
         - in: query
           name: k8s
@@ -89,28 +89,24 @@ paths:
           name: numServices
           schema:
             default: 5
-            type: int
-            x-go-type: int
-          description: number of services to run
+            type: integer
+          description: integer of services to run
         - in: query
           name: minReplicas
           schema:
             default: 2
-            type: int
-            x-go-type: int
+            type: integer
           description: minimum number of replicas per service
         - in: query
           name: maxReplicas
           schema:
             default: 2
-            type: int
-            x-go-type: int
+            type: integer
           description: maximum number of replicas per service
         - in: query
           name: percentEdge
           schema:
-            type: int
-            x-go-type: int
+            type: integer
             default: 50
             minimum: 0
             maximum: 100
@@ -146,8 +142,7 @@ components:
       required: [status, details]
       properties:
         status:
-          type: number
-          x-go-type: int
+          type: integer
         details:
           type: string
         invalid_parameters:
@@ -167,8 +162,7 @@ components:
       required: [status]
       properties:
         status:
-          type: number
-          x-go-type: int
+          type: integer
     HomeResponse:
       type: object
       required: [ version, hostname, commit, target ]
