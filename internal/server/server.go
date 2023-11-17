@@ -71,12 +71,12 @@ func (s *srv) GenerateRandom(c *gin.Context, format restapi.GenerateRandomParams
 	}
 	percentEdge := 50
 	if params.PercentEdge != nil {
-		percentEdge = 50
+		percentEdge = *params.PercentEdge
 	}
 	if percentEdge < 0 || percentEdge > 100 {
 		invParams = append(invParams, restapi.InvalidParameter{
 			Field:  "percentEdge",
-			Reason: "must be between 0 and 99",
+			Reason: "must be between 0 and 100",
 		})
 	}
 	minReplicas := 2

@@ -2,11 +2,16 @@
 (function () {
     'use strict'
 
+    function getRandomInt() {
+        return Math.floor(Math.random() * 100000000000);
+    }
+
     const randomParamsWithDefaults = {
-        "seed": new Date().getTime(),
+        "seed": getRandomInt(),
         "numServices": 3,
         "minReplicas": 2,
         "maxReplicas": 2,
+        "percentEdge": 50,
         "yaml": null,
     }
 
@@ -16,6 +21,10 @@
             randomResponseContainer.classList.add('d-none');
             const randomForm = document.querySelector("#form-random")
             const randomFormAlert = randomForm.querySelector(".failure-alert")
+            randomForm.querySelector('button.seed-refresh').addEventListener('click', function (event) {
+               event.preventDefault();
+               randomForm.querySelector("input[name='seed']").value = getRandomInt()
+            });
 
             // Watch changes to url to call the api
             let previousUrl;

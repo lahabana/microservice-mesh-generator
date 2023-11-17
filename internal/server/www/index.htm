@@ -71,6 +71,10 @@
                         <span class="input-group-text" id="random-form-seed">Seed</span>
                         <input type="number" name="seed" class="form-control" placeholder="seed" aria-label="seed"
                                aria-describedby="random-form-seed" required>
+                        <button class="seed-refresh input-group-text"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+                            <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                            <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                        </svg></button>
                         <div class="invalid-feedback">
                             Seed must be set and be a number
                         </div>
@@ -85,11 +89,15 @@
                                aria-describedby="random-form-replicas" required>
                         <input type="number" class="form-control" placeholder="maximum" name="maxReplicas" min=1 aria-label="max-replicas"
                                aria-describedby="random-form-replicas" required>
+                        <span class="input-group-text" id="random-form-edge">Edge chance</span>
+                        <input type="number" class="form-control" placeholder="change to have an edge between 2 services" name="percentEdge" min=0 max="100" aria-label="percent-edge"
+                               aria-describedby="random-form-edge" required>
+                        <span class="input-group-text">%</span>
                         <div class="invalid-feedback">
                             You must set a number of services and the number of replicas must be more than 1 and max replicas must be > min
                         </div>
                     </div>
-                    <div class="input-group mb-3 random-params-group">
+                    <div class="input-group mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" role="switch" name="yaml" id="yaml">
                             <label class="form-check-label" for="yaml">As yaml (by default it shows a <a href="https://mermaid.js.org/intro/">Mermaid rendered representation</a>).</label>
@@ -98,28 +106,28 @@
                     <div class="failure-alert alert alert-danger d-none" role="alert">
                     </div>
                     <div class="col-12">
-                        <button class="btn btn-primary" type="submit">Generate a mesh!</button>
+                        <button class="btn btn-primary" type="submit">Generate mesh view!</button>
                     </div>
                 </form>
 
                 <section class="container-md" id="random-response-container"></section>
-<!--                <form>-->
-<!--                                    <div class="form-check form-switch">-->
-<!--                                        <input class="form-check-input" type="checkbox" id="flexSwitchCheckChecked" checked>-->
-<!--                                        <label class="form-check-label" for="flexSwitchCheckChecked">Output As k8s</label>-->
-<!--                                    </div>-->
-<!--                                    <div class="input-group mb-3 k8s-params">-->
+                <form class="needs-validation" id="form-random-kubernetes">
+                    <div class="input-group mb-3 k8s-params">
+                        <span class="input-group-text" id="random-form-k8s-namespace">Namespace</span>
+                        <input type="text" class="form-control" placeholder="Namespace" aria-label="namespace"
+                               aria-describedby="random-form-k8s-namespace">
+                        <span class="input-group-text" aria-describedby="random-form-k8s-app">App</span>
+                        <select class="form-select" aria-label="select-app" aria-describedby="random-form-k8s-app">
+                            <option value="api-play" selected>api-play</option>
+                            <option value="fake-service">fake-service</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit">Generate kubernetes manifest!</button>
+                    </div>
+                    <section class="container-md" id="k8s-response-container"></section>
 
-<!--                                        <span class="input-group-text" id="random-form-k8s-namespace">Namespace</span>-->
-<!--                                        <input type="text" class="form-control" placeholder="Namespace" aria-label="namespace"-->
-<!--                                               aria-describedby="random-form-k8s-namespace">-->
-<!--                                        <span class="input-group-text" aria-describedby="random-form-k8s-app">App</span>-->
-<!--                                        <select class="form-select" aria-label="select-app" aria-describedby="random-form-k8s-app">-->
-<!--                                            <option value="api-play" selected>api-play</option>-->
-<!--                                            <option value="fake-service">fake-service</option>-->
-<!--                                        </select>-->
-<!--                                    </div>-->
-<!--                </form>-->
+                </form>
 
             </div>
             <div class="tab-pane fade" id="v-pills-define" role="tabpanel" aria-labelledby="v-pills-profile-define">
