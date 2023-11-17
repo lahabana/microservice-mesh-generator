@@ -13,17 +13,51 @@
         "maxReplicas": 2,
         "percentEdge": 50,
         "yaml": null,
+        "k8sNamespace": "microservice-mesh",
+        "k8sApp": "api-play",
+    }
+
+    async function sendRequestAndPopulate(url, alertContainer, responseContainer, responseClasses) {
+        let response = await fetch(url)
+        if (!response.ok) {
+            alertContainer.removeChild(alertContainer.firstChild)
+            let pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(await response.json(), null, 4);
+            alertContainer.appendChild(pre);
+            alertContainer.classList.remove('d-none');
+            return false
+        }
+        let pre = document.createElement("pre");
+        if (responseClasses) {
+            pre.classList.add(responseClasses)
+        }
+        pre.textContent = await response.text();
+        responseContainer.querySelector('.highlight').appendChild(pre);
+        responseContainer.classList.remove('d-none');
+        return true
+
     }
 
     document.onreadystatechange = () => {
         if (document.readyState === "complete") {
+            // Setup randomForm
             const randomResponseContainer = document.querySelector("#random-response-container");
-            randomResponseContainer.classList.add('d-none');
-            const randomForm = document.querySelector("#form-random")
+            const randomK8sResponseContainer = document.querySelector("#random-k8s-response-container");
+
+            const randomForm = document.querySelector('#form-random')
             const randomFormAlert = randomForm.querySelector(".failure-alert")
             randomForm.querySelector('button.seed-refresh').addEventListener('click', function (event) {
-               event.preventDefault();
-               randomForm.querySelector("input[name='seed']").value = getRandomInt()
+                event.preventDefault();
+                randomForm.querySelector("input[name='seed']").value = getRandomInt()
+            });
+            const copyToClipboardList = document.querySelectorAll('button.btn-clipboard')
+            copyToClipboardList.forEach(tooltipTriggerEl => {
+                tooltipTriggerEl.addEventListener('click', (event) => {
+                    navigator.clipboard.writeText(tooltipTriggerEl.parentElement.parentElement.querySelector('.highlight').innerText);
+                })
+                const tt = new bootstrap.Tooltip(tooltipTriggerEl);
+                tt.setContent({'.tooltip-inner': 'Copy to clipboard'});
+                return tt;
             });
 
             // Watch changes to url to call the api
@@ -34,7 +68,7 @@
                     let url = new URL(document.location);
                     let apiURL = new URL(document.location);
                     for (const key in randomParamsWithDefaults) {
-                        let elt = randomForm.querySelector(`input[name='${key}']`);
+                        let elt = randomForm.querySelector(`input[name='${key}'], select[name='${key}']`);
                         if (!elt) {
                             console.error(`No input in form ${key}`);
                             continue
@@ -54,34 +88,26 @@
                     previousUrl = location.href;
                     console.log(`URL changed from ${previousUrl} to ${location.href}`);
                     if (oldUrl?.hash === '#random') {
-                        randomResponseContainer.removeChild(randomResponseContainer.firstChild);
+                        let rrhl = randomResponseContainer.querySelector('.highlight');
+                        rrhl.removeChild(rrhl.firstChild);
+                        let k8srrhl = randomK8sResponseContainer.querySelector('.highlight');
+                        k8srrhl.removeChild(k8srrhl.firstChild);
                         randomResponseContainer.classList.add('d-none');
+                        randomK8sResponseContainer.classList.add('d-none');
                     }
                     if (newUrl.hash === '#random') {
-                        //
                         const asYaml = newUrl.searchParams.has('yaml');
                         if (asYaml) {
                             apiURL.pathname = '/api/random.yaml';
                         } else {
                             apiURL.pathname = '/api/random.mmd';
                         }
-                        let response = await fetch(apiURL)
-                        if (!response.ok) {
-                            randomFormAlert.removeChild(randomFormAlert.firstChild)
-                            let pre = document.createElement('pre');
-                            pre.textContent = JSON.stringify(await response.json(), null, 4);
-                            randomFormAlert.appendChild(pre);
-                            randomFormAlert.classList.remove('d-none');
-                        } else {
-                            let pre = document.createElement("pre");
-                            if (asYaml) {
-                                pre.classList.add("yaml");
-                            } else {
-                                pre.classList.add("mermaid");
-                            }
-                            pre.textContent = await response.text();
-                            randomResponseContainer.appendChild(pre);
-                            randomResponseContainer.classList.remove('d-none');
+                        let success = await sendRequestAndPopulate(apiURL, randomFormAlert, randomResponseContainer, asYaml ? ["yaml"] : ["mermaid"])
+                        if (success) {
+                            let k8sUrl = new URL(apiURL);
+                            k8sUrl.pathname = '/api/random.yaml';
+                            k8sUrl.searchParams.set("k8s", 'true');
+                            await sendRequestAndPopulate(k8sUrl, randomFormAlert, randomK8sResponseContainer)
                         }
                     }
                 }

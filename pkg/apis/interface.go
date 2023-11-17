@@ -46,7 +46,7 @@ var DotGenerator = GeneratorFunc(func(writer io.Writer, s ServiceGraph) error {
 var MermaidGenerator = GeneratorFunc(func(writer io.Writer, s ServiceGraph) error {
 	var allEdges []string
 	for _, srv := range s.Services {
-		allEdges = append(allEdges, fmt.Sprintf("\t%d(%d);", srv.Idx, srv.Idx))
+		allEdges = append(allEdges, fmt.Sprintf("\t%d(%d replicas:%d);", srv.Idx, srv.Idx, srv.Replicas))
 		for _, other := range srv.Edges {
 			allEdges = append(allEdges, fmt.Sprintf("\t%d --> %d;", srv.Idx, other))
 		}
