@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lahabana/microservice-mesh-generator/internal/generate"
 	"github.com/lahabana/microservice-mesh-generator/internal/restapi"
+	"github.com/lahabana/microservice-mesh-generator/internal/server/www"
 	"github.com/lahabana/microservice-mesh-generator/pkg/apis"
 	"github.com/lahabana/microservice-mesh-generator/pkg/version"
 	"github.com/lahabana/otel-gin/pkg/observability"
@@ -156,7 +157,24 @@ func Start(ctx context.Context) error {
 		panic(err)
 	}
 	engine := gin.New()
-	engine.Use(gin.Recovery(), obs.Middleware())
-	restapi.RegisterHandlersWithOptions(engine, &srv{}, restapi.GinServerOptions{})
+	engine.Use(gin.CustomRecovery(func(c *gin.Context, err any) {
+		obs.Logger().ErrorContext(c.Request.Context(), "panic in handler", "error", err)
+
+		c.PureJSON(http.StatusInternalServerError, &restapi.ErrorResponse{
+			Status:  http.StatusInternalServerError,
+			Details: "Internal server error",
+		})
+	}), obs.Middleware())
+	restapi.RegisterHandlersWithOptions(engine, &srv{}, restapi.GinServerOptions{
+		ErrorHandler: func(c *gin.Context, err error, status int) {
+			c.PureJSON(status, &restapi.ErrorResponse{
+				Status:  status,
+				Details: err.Error(),
+			})
+		},
+	})
+	hfs := http.FS(www.Content)
+	engine.StaticFileFS("/", "index.htm", hfs)
+	engine.StaticFS("/static", hfs)
 	return engine.Run()
 }
