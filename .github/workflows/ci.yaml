@@ -93,3 +93,12 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           file: Dockerfile
+      - name: Install and configure the Koyeb CLI
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: koyeb-community/install-koyeb-cli@v2
+        with:
+          api_token: "${{ secrets.KOYEB_TOKEN }}"
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Deploy to Koyeb
+        if: ${{ github.event_name != 'pull_request' }}
+        run: koyeb service redeploy mservice-mesh-generator/microservice-mesh-generator
