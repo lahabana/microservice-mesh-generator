@@ -2,6 +2,7 @@ package apis
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -16,6 +17,51 @@ type Service struct {
 type ServiceGraph struct {
 	Services         []Service `yaml:"services" json:"services"`
 	GenerationParams string    `yaml:"generationParams" json:"generationParams"`
+}
+
+func (g ServiceGraph) Validate() error {
+	// Check first that all indexes correspond to array idx
+	for i, srv := range g.Services {
+		if i != srv.Idx {
+			return fmt.Errorf("service's Idx:%d doesn't refer to its position in the service array: %d", i, srv.Idx)
+		}
+		for _, edge := range srv.Edges {
+			if edge >= len(g.Services) || edge < 0 {
+				return fmt.Errorf("service's Idx:%d has edge '%d' that is not an actual service", i, edge)
+			}
+		}
+	}
+	// Check for cycles
+	permanentMark := map[int]struct{}{}
+	temporaryMark := map[int]struct{}{}
+	var visit func(n int) error
+	visit = func(n int) error {
+		if _, exists := permanentMark[n]; exists {
+			return nil
+		}
+		if _, exists := temporaryMark[n]; exists {
+			return errors.New("cycle detected")
+		}
+		temporaryMark[n] = struct{}{}
+
+		for _, edge := range g.Services[n].Edges {
+			if err := visit(edge); err != nil {
+				return err
+			}
+		}
+		delete(temporaryMark, n)
+		permanentMark[n] = struct{}{}
+		return nil
+	}
+	for i := range g.Services {
+		if _, exists := permanentMark[i]; exists {
+			continue
+		}
+		if err := visit(i); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Generator generates the graph is a custom format

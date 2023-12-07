@@ -11,19 +11,19 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for GenerateRandomParamsK8sApp.
+// Defines values for K8sAppType.
 const (
-	ApiPlay     GenerateRandomParamsK8sApp = "api-play"
-	FakeService GenerateRandomParamsK8sApp = "fake-service"
+	ApiPlay     K8sAppType = "api-play"
+	FakeService K8sAppType = "fake-service"
 )
 
-// Defines values for GenerateRandomParamsFormat.
+// Defines values for OutputFormat.
 const (
-	Empty GenerateRandomParamsFormat = ""
-	Gv    GenerateRandomParamsFormat = "gv"
-	Json  GenerateRandomParamsFormat = "json"
-	Mmd   GenerateRandomParamsFormat = "mmd"
-	Yaml  GenerateRandomParamsFormat = "yaml"
+	Empty OutputFormat = ""
+	Gv    OutputFormat = "gv"
+	Json  OutputFormat = "json"
+	Mmd   OutputFormat = "mmd"
+	Yaml  OutputFormat = "yaml"
 )
 
 // ErrorResponse defines model for ErrorResponse.
@@ -52,13 +52,54 @@ type InvalidParameter struct {
 	Reason string `json:"reason"`
 }
 
-// RandomMeshResponse defines model for RandomMeshResponse.
-type RandomMeshResponse = map[string]interface{}
+// K8sAppType defines model for K8sAppType.
+type K8sAppType string
+
+// MeshDefinition defines model for MeshDefinition.
+type MeshDefinition struct {
+	Services []ServiceEntry `json:"services"`
+}
+
+// MeshResponse defines model for MeshResponse.
+type MeshResponse = map[string]interface{}
+
+// OutputFormat defines model for OutputFormat.
+type OutputFormat string
+
+// ServiceEntry defines model for ServiceEntry.
+type ServiceEntry struct {
+	Edges    []int `json:"edges"`
+	Replicas int   `json:"replicas"`
+}
+
+// PostApiDefineFormatParams defines parameters for PostApiDefineFormat.
+type PostApiDefineFormatParams struct {
+	// K8sApp The app to use
+	K8sApp *K8sAppType `form:"k8sApp,omitempty" json:"k8sApp,omitempty"`
+
+	// K8sNamespace the namespace to use
+	K8sNamespace *string `form:"k8sNamespace,omitempty" json:"k8sNamespace,omitempty"`
+
+	// K8s whether or not to return kubernetes manifest
+	K8s *bool `form:"k8s,omitempty" json:"k8s,omitempty"`
+
+	// NumServices integer of services to run
+	NumServices *int `form:"numServices,omitempty" json:"numServices,omitempty"`
+
+	// MinReplicas minimum number of replicas per service
+	MinReplicas *int `form:"minReplicas,omitempty" json:"minReplicas,omitempty"`
+
+	// MaxReplicas maximum number of replicas per service
+	MaxReplicas *int `form:"maxReplicas,omitempty" json:"maxReplicas,omitempty"`
+
+	// PercentEdge maximum number of replicas per service
+	PercentEdge *int `form:"percentEdge,omitempty" json:"percentEdge,omitempty"`
+}
 
 // GenerateRandomParams defines parameters for GenerateRandom.
 type GenerateRandomParams struct {
 	// K8sApp The app to use
-	K8sApp *GenerateRandomParamsK8sApp `form:"k8sApp,omitempty" json:"k8sApp,omitempty"`
+	K8sApp *K8sAppType `form:"k8sApp,omitempty" json:"k8sApp,omitempty"`
 
 	// K8sNamespace the namespace to use
 	K8sNamespace *string `form:"k8sNamespace,omitempty" json:"k8sNamespace,omitempty"`
@@ -82,20 +123,20 @@ type GenerateRandomParams struct {
 	PercentEdge *int `form:"percentEdge,omitempty" json:"percentEdge,omitempty"`
 }
 
-// GenerateRandomParamsK8sApp defines parameters for GenerateRandom.
-type GenerateRandomParamsK8sApp string
-
-// GenerateRandomParamsFormat defines parameters for GenerateRandom.
-type GenerateRandomParamsFormat string
+// PostApiDefineFormatJSONRequestBody defines body for PostApiDefineFormat for application/json ContentType.
+type PostApiDefineFormatJSONRequestBody = MeshDefinition
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// home
 	// (GET /api)
 	Home(c *gin.Context)
+
+	// (POST /api/define.{format})
+	PostApiDefineFormat(c *gin.Context, format OutputFormat, params PostApiDefineFormatParams)
 	// generate a random mesh
 	// (GET /api/random.{format})
-	GenerateRandom(c *gin.Context, format GenerateRandomParamsFormat, params GenerateRandomParams)
+	GenerateRandom(c *gin.Context, format OutputFormat, params GenerateRandomParams)
 	// healthcheck
 	// (GET /health)
 	Health(c *gin.Context)
@@ -126,13 +167,96 @@ func (siw *ServerInterfaceWrapper) Home(c *gin.Context) {
 	siw.Handler.Home(c)
 }
 
+// PostApiDefineFormat operation middleware
+func (siw *ServerInterfaceWrapper) PostApiDefineFormat(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "format" -------------
+	var format OutputFormat
+
+	err = runtime.BindStyledParameter("simple", false, "format", c.Param("format"), &format)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter format: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostApiDefineFormatParams
+
+	// ------------- Optional query parameter "k8sApp" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "k8sApp", c.Request.URL.Query(), &params.K8sApp)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter k8sApp: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "k8sNamespace" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "k8sNamespace", c.Request.URL.Query(), &params.K8sNamespace)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter k8sNamespace: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "k8s" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "k8s", c.Request.URL.Query(), &params.K8s)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter k8s: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "numServices" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "numServices", c.Request.URL.Query(), &params.NumServices)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter numServices: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "minReplicas" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "minReplicas", c.Request.URL.Query(), &params.MinReplicas)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter minReplicas: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "maxReplicas" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "maxReplicas", c.Request.URL.Query(), &params.MaxReplicas)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter maxReplicas: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "percentEdge" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "percentEdge", c.Request.URL.Query(), &params.PercentEdge)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter percentEdge: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostApiDefineFormat(c, format, params)
+}
+
 // GenerateRandom operation middleware
 func (siw *ServerInterfaceWrapper) GenerateRandom(c *gin.Context) {
 
 	var err error
 
 	// ------------- Path parameter "format" -------------
-	var format GenerateRandomParamsFormat
+	var format OutputFormat
 
 	err = runtime.BindStyledParameter("simple", false, "format", c.Param("format"), &format)
 	if err != nil {
@@ -271,6 +395,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/api", wrapper.Home)
+	router.POST(options.BaseURL+"/api/define.:format", wrapper.PostApiDefineFormat)
 	router.GET(options.BaseURL+"/api/random.:format", wrapper.GenerateRandom)
 	router.GET(options.BaseURL+"/health", wrapper.Health)
 	router.GET(options.BaseURL+"/ready", wrapper.Ready)

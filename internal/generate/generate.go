@@ -84,6 +84,9 @@ func Run(conf Config, genFn func(seed int64) (apis.ServiceGraph, error)) error {
 	if err != nil {
 		return err
 	}
+	if err := serviceGraph.Validate(); err != nil {
+		return &InvalidConfError{msg: err.Error()}
+	}
 	if commentMarker != "" {
 		_, _ = fmt.Fprintf(conf.Writer, "%s runParameters=package:%s,version:%s,commit:%s,seed:%d\n", commentMarker, version.Name, version.Version, version.Commit, conf.Seed)
 		_, _ = fmt.Fprintf(conf.Writer, "%s generationParameters=%s\n", commentMarker, serviceGraph.GenerationParams)

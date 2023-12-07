@@ -62,13 +62,11 @@ paths:
           name: format
           required: true
           schema:
-            type: string
-            enum: ["", "mmd", "gv", "yaml", "json"]
+            $ref: '#/components/schemas/OutputFormat'
         - in: query
           name: k8sApp
           schema:
-            type: string
-            enum: ["api-play", "fake-service"]
+            $ref: '#/components/schemas/K8sAppType'
           description: The app to use
         - in: query
           name: k8sNamespace
@@ -111,17 +109,93 @@ paths:
             minimum: 0
             maximum: 100
           description: maximum number of replicas per service
-
       responses:
         '200':
           description: "OK"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RandomMeshResponse'
+                $ref: '#/components/schemas/MeshResponse'
             application/yaml:
               schema:
-                $ref: '#/components/schemas/RandomMeshResponse'
+                $ref: '#/components/schemas/MeshResponse'
+            text/vnd.mermaid:
+              schema:
+                type: string
+            text/vnd.graphviz:
+              schema:
+                type: string
+
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/define.{format}:
+    post:
+      parameters:
+      - in: path
+        name: format
+        required: true
+        schema:
+          $ref: '#/components/schemas/OutputFormat'
+      - in: query
+        name: k8sApp
+        schema:
+          $ref: '#/components/schemas/K8sAppType'
+        description: The app to use
+      - in: query
+        name: k8sNamespace
+        schema:
+          type: string
+        description: the namespace to use
+      - in: query
+        name: k8s
+        schema:
+          type: boolean
+        description: whether or not to return kubernetes manifest
+      - in: query
+        name: numServices
+        schema:
+          default: 5
+          type: integer
+        description: integer of services to run
+      - in: query
+        name: minReplicas
+        schema:
+          default: 2
+          type: integer
+        description: minimum number of replicas per service
+      - in: query
+        name: maxReplicas
+        schema:
+          default: 2
+          type: integer
+        description: maximum number of replicas per service
+      - in: query
+        name: percentEdge
+        schema:
+          type: integer
+          default: 50
+          minimum: 0
+          maximum: 100
+        description: maximum number of replicas per service
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeshDefinition'
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeshResponse'
+            application/yaml:
+              schema:
+                $ref: '#/components/schemas/MeshResponse'
             text/vnd.mermaid:
               schema:
                 type: string
@@ -175,6 +249,33 @@ components:
           type: string
         target:
           type: string
-    RandomMeshResponse:
+    MeshResponse:
       type: object
       properties: {}
+    MeshDefinition:
+      type: object
+      required: [services]
+      properties:
+        services:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items:
+            $ref: '#/components/schemas/ServiceEntry'
+    ServiceEntry:
+      type: object
+      required: [edges, replicas]
+      properties:
+        edges:
+          type: array
+          maxItems: 50
+          items:
+            type: integer
+        replicas:
+          type: integer
+    OutputFormat:
+      type: string
+      enum: ["", "mmd", "gv", "yaml", "json"]
+    K8sAppType:
+      type: string
+      enum: ["api-play", "fake-service"]
