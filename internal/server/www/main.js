@@ -6,7 +6,7 @@
         return Math.floor(Math.random() * 100000000000);
     }
 
-    const randomParamsWithDefaults = {
+    const formParamsWithDefaults = {
         "seed": getRandomInt(),
         "numServices": 3,
         "minReplicas": 2,
@@ -15,10 +15,21 @@
         "yaml": null,
         "k8sNamespace": "microservice-mesh",
         "k8sApp": "api-play",
+        "defineContent": JSON.stringify({services: [{"replicas": 2, "edges": [1]}, {"replicas": 2}]})
     }
 
-    async function sendRequestAndPopulate(url, alertContainer, responseContainer, responseClasses) {
-        let response = await fetch(url)
+    async function sendRequestAndPopulate(url, body, alertContainer, responseContainer, responseClasses) {
+        let params = {}
+        if (body) {
+            params = {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: body,
+            }
+        }
+        let response = await fetch(url, params)
         if (!response.ok) {
             alertContainer.removeChild(alertContainer.firstChild)
             let pre = document.createElement('pre');
@@ -35,7 +46,6 @@
         responseContainer.querySelector('.highlight').appendChild(pre);
         responseContainer.classList.remove('d-none');
         return true
-
     }
 
     document.onreadystatechange = () => {
@@ -43,9 +53,30 @@
             // Setup randomForm
             const randomResponseContainer = document.querySelector("#random-response-container");
             const randomK8sResponseContainer = document.querySelector("#random-k8s-response-container");
+            const defineResponseContainer = document.querySelector("#define-response-container");
+            const defineK8sResponseContainer = document.querySelector("#define-k8s-response-container");
+
+            document.querySelectorAll(".nav-link").forEach((elt) => elt.addEventListener('click', function(e) {
+                window.location.href = e.target.href
+            }))
+            if (location.hash === "#define") {
+                document.querySelector("#v-pills-define").classList.add("active", "show")
+                document.querySelector("#v-pills-define-tab").classList.add("active")
+
+                document.querySelector("#v-pills-random").classList.remove("active", "show")
+                document.querySelector("#v-pills-random-tab").classList.remove("active")
+            } else {
+                document.querySelector("#v-pills-random").classList.add("active", "show")
+                document.querySelector("#v-pills-random-tab").classList.add("active")
+
+                document.querySelector("#v-pills-define-tab").classList.remove("active")
+                document.querySelector("#v-pills-define").classList.remove("active", "show")
+            }
 
             const randomForm = document.querySelector('#form-random')
             const randomFormAlert = randomForm.querySelector(".failure-alert")
+            const defineForm = document.querySelector('#form-define')
+            const defineFormAlert = defineForm.querySelector(".failure-alert")
             randomForm.querySelector('button.seed-refresh').addEventListener('click', function (event) {
                 event.preventDefault();
                 randomForm.querySelector("input[name='seed']").value = getRandomInt()
@@ -67,17 +98,17 @@
                     // Set form values to whatever is in the url or default
                     let url = new URL(document.location);
                     let apiURL = new URL(document.location);
-                    for (const key in randomParamsWithDefaults) {
-                        let elt = randomForm.querySelector(`input[name='${key}'], select[name='${key}']`);
+                    let form = url.hash === '#define' ? defineForm : randomForm;
+                    for (const key in  formParamsWithDefaults) {
+                        let elt = form.querySelector(`input[name='${key}'], select[name='${key}'], textarea[name='${key}']`);
                         if (!elt) {
-                            console.error(`No input in form ${key}`);
                             continue
                         }
                         if (elt.type === "checkbox") {
                             elt.checked = url.searchParams.has(key);
                             elt.value = true;
                         } else {
-                            elt.value = url.searchParams.has(key) ? url.searchParams.get(key) : randomParamsWithDefaults[key]
+                            elt.value = url.searchParams.has(key) ? url.searchParams.get(key) :  formParamsWithDefaults[key]
                         }
                         if (elt.value !== '') {
                             apiURL.searchParams.set(key, elt.value);
@@ -85,8 +116,8 @@
                     }
                     let newUrl = new URL(location.href);
                     let oldUrl = previousUrl && new URL(previousUrl);
-                    previousUrl = location.href;
                     console.log(`URL changed from ${previousUrl} to ${location.href}`);
+                    previousUrl = location.href;
                     if (oldUrl?.hash === '#random') {
                         let rrhl = randomResponseContainer.querySelector('.highlight');
                         rrhl.removeChild(rrhl.firstChild);
@@ -94,6 +125,13 @@
                         k8srrhl.removeChild(k8srrhl.firstChild);
                         randomResponseContainer.classList.add('d-none');
                         randomK8sResponseContainer.classList.add('d-none');
+                    } else if (oldUrl?.hash === '#define') {
+                        let rrhl = defineResponseContainer.querySelector('.highlight');
+                        rrhl.removeChild(rrhl.firstChild);
+                        let k8srrhl = defineK8sResponseContainer.querySelector('.highlight');
+                        k8srrhl.removeChild(k8srrhl.firstChild);
+                        defineResponseContainer.classList.add('d-none');
+                        defineK8sResponseContainer.classList.add('d-none');
                     }
                     if (newUrl.hash === '#random') {
                         const asYaml = newUrl.searchParams.has('yaml');
@@ -102,12 +140,27 @@
                         } else {
                             apiURL.pathname = '/api/random.mmd';
                         }
-                        let success = await sendRequestAndPopulate(apiURL, randomFormAlert, randomResponseContainer, asYaml ? ["yaml"] : ["mermaid"])
+                        let success = await sendRequestAndPopulate(apiURL, undefined, randomFormAlert, randomResponseContainer, asYaml ? ["yaml"] : ["mermaid"])
                         if (success) {
                             let k8sUrl = new URL(apiURL);
                             k8sUrl.pathname = '/api/random.yaml';
                             k8sUrl.searchParams.set("k8s", 'true');
-                            await sendRequestAndPopulate(k8sUrl, randomFormAlert, randomK8sResponseContainer)
+                            await sendRequestAndPopulate(k8sUrl, undefined, randomFormAlert, randomK8sResponseContainer)
+                        }
+                    } else if (newUrl.hash === "#define") {
+                        const asYaml = newUrl.searchParams.has('yaml');
+                        if (asYaml) {
+                            apiURL.pathname = '/api/define.yaml';
+                        } else {
+                            apiURL.pathname = '/api/define.mmd';
+                        }
+                        let payload = newUrl.searchParams.get('defineContent')
+                        let success = await sendRequestAndPopulate(apiURL, payload, defineFormAlert, defineResponseContainer, asYaml ? ["yaml"] : ["mermaid"])
+                        if (success) {
+                            let k8sUrl = new URL(apiURL);
+                            k8sUrl.pathname = '/api/define.yaml';
+                            k8sUrl.searchParams.set("k8s", 'true');
+                            await sendRequestAndPopulate(k8sUrl, payload, defineFormAlert, defineK8sResponseContainer)
                         }
                     }
                 }
