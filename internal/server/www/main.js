@@ -93,7 +93,7 @@
 
             // Watch changes to url to call the api
             let previousUrl;
-            let observer = new MutationObserver(async function (mutations) {
+            let handlePageChange = async () => {
                 if (location.href !== previousUrl) {
                     // Set form values to whatever is in the url or default
                     let url = new URL(document.location);
@@ -108,7 +108,7 @@
                             elt.checked = url.searchParams.has(key);
                             elt.value = true;
                         } else {
-                            elt.value = url.searchParams.has(key) ? url.searchParams.get(key) :  formParamsWithDefaults[key]
+                            elt.value = url.searchParams.has(key) ? url.searchParams.get(key) : formParamsWithDefaults[key]
                         }
                         if (elt.value !== '') {
                             apiURL.searchParams.set(key, elt.value);
@@ -116,20 +116,29 @@
                     }
                     let newUrl = new URL(location.href);
                     let oldUrl = previousUrl && new URL(previousUrl);
-                    console.log(`URL changed from ${previousUrl} to ${location.href}`);
                     previousUrl = location.href;
                     if (oldUrl?.hash === '#random') {
                         let rrhl = randomResponseContainer.querySelector('.highlight');
-                        rrhl.removeChild(rrhl.firstChild);
+                        if (rrhl.firstChild) {
+                            rrhl.removeChild(rrhl.firstChild);
+                        }
+
                         let k8srrhl = randomK8sResponseContainer.querySelector('.highlight');
-                        k8srrhl.removeChild(k8srrhl.firstChild);
+                        if (k8srrhl.firstChild) {
+                            k8srrhl.removeChild(k8srrhl.firstChild);
+                        }
                         randomResponseContainer.classList.add('d-none');
                         randomK8sResponseContainer.classList.add('d-none');
                     } else if (oldUrl?.hash === '#define') {
                         let rrhl = defineResponseContainer.querySelector('.highlight');
-                        rrhl.removeChild(rrhl.firstChild);
+                        if (rrhl.firstChild) {
+                            rrhl.removeChild(rrhl.firstChild);
+                        }
+
                         let k8srrhl = defineK8sResponseContainer.querySelector('.highlight');
-                        k8srrhl.removeChild(k8srrhl.firstChild);
+                        if (k8srrhl.firstChild) {
+                            k8srrhl.removeChild(k8srrhl.firstChild);
+                        }
                         defineResponseContainer.classList.add('d-none');
                         defineK8sResponseContainer.classList.add('d-none');
                     }
@@ -154,7 +163,7 @@
                         } else {
                             apiURL.pathname = '/api/define.mmd';
                         }
-                        let payload = newUrl.searchParams.get('defineContent')
+                        let payload = apiURL.searchParams.get('defineContent')
                         let success = await sendRequestAndPopulate(apiURL, payload, defineFormAlert, defineResponseContainer, asYaml ? ["yaml"] : ["mermaid"])
                         if (success) {
                             let k8sUrl = new URL(apiURL);
@@ -164,8 +173,10 @@
                         }
                     }
                 }
-            });
-            observer.observe(document.body, {childList: true, subtree: true});
+            };
+            window.addEventListener('hashchange', handlePageChange);
+            window.addEventListener('popstate', handlePageChange);
+            handlePageChange()
             document.querySelector(".random-params-group").addEventListener("change", (event) => {
                 // Sync strongly min and max to avoid invalid states
                 let minReplicas = event.currentTarget.querySelector("input[name='minReplicas']");
