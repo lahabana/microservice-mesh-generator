@@ -26,6 +26,18 @@ const (
 	Yaml  OutputFormat = "yaml"
 )
 
+// CatalogItem defines model for CatalogItem.
+type CatalogItem struct {
+	Definition  MeshDefinition `json:"definition"`
+	Description string         `json:"description"`
+	Title       string         `json:"title"`
+}
+
+// CatalogResponse defines model for CatalogResponse.
+type CatalogResponse struct {
+	Entries []CatalogItem `json:"entries"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Details           string              `json:"details"`
@@ -132,6 +144,9 @@ type ServerInterface interface {
 	// (GET /api)
 	Home(c *gin.Context)
 
+	// (GET /api/catalog)
+	GetApiCatalog(c *gin.Context)
+
 	// (POST /api/define.{format})
 	PostApiDefineFormat(c *gin.Context, format OutputFormat, params PostApiDefineFormatParams)
 	// generate a random mesh
@@ -165,6 +180,19 @@ func (siw *ServerInterfaceWrapper) Home(c *gin.Context) {
 	}
 
 	siw.Handler.Home(c)
+}
+
+// GetApiCatalog operation middleware
+func (siw *ServerInterfaceWrapper) GetApiCatalog(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetApiCatalog(c)
 }
 
 // PostApiDefineFormat operation middleware
@@ -395,6 +423,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/api", wrapper.Home)
+	router.GET(options.BaseURL+"/api/catalog", wrapper.GetApiCatalog)
 	router.POST(options.BaseURL+"/api/define.:format", wrapper.PostApiDefineFormat)
 	router.GET(options.BaseURL+"/api/random.:format", wrapper.GenerateRandom)
 	router.GET(options.BaseURL+"/health", wrapper.Health)

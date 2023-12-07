@@ -22,6 +22,25 @@ type srv struct {
 	l *slog.Logger
 }
 
+func (s *srv) GetApiCatalog(c *gin.Context) {
+	c.PureJSON(http.StatusOK, restapi.CatalogResponse{
+		Entries: []restapi.CatalogItem{
+			{
+				Title:       "simple-multi-service",
+				Description: "a list of simple services",
+				Definition: restapi.MeshDefinition{
+					Services: []restapi.ServiceEntry{
+						{Edges: []int{1, 2}, Replicas: 2},
+						{Edges: []int{}, Replicas: 2},
+						{Edges: []int{3}, Replicas: 2},
+						{Replicas: 2},
+					},
+				},
+			},
+		},
+	})
+}
+
 func (s *srv) PostApiDefineFormat(c *gin.Context, format restapi.OutputFormat, params restapi.PostApiDefineFormatParams) {
 	ctx := c.Request.Context()
 	if c.Request.ContentLength > (1 << 20) {

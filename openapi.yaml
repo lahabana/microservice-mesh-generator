@@ -1,4 +1,4 @@
-openapi: "3.0.3"
+openapi: '3.0.3'
 info:
   version: 1.0.0
   title: Microservice Mesh Generator
@@ -14,48 +14,48 @@ tags:
 paths:
   /ready:
     get:
-      tags: ["base"]
+      tags: ['base']
       summary: healthcheck
       description: healthcheck
       operationId: ready
       responses:
         '200':
-          description: "OK"
+          description: 'OK'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
   /health:
     get:
-      tags: [ "base" ]
+      tags: [ 'base' ]
       summary: healthcheck
       description: healthcheck
       operationId: health
       responses:
         '200':
-          description: "OK"
+          description: 'OK'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
   /api:
     get:
-      tags: ["base"]
+      tags: ['base']
       summary: home
       description: home
       operationId: home
       responses:
         '200':
-          description: "OK"
+          description: 'OK'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HomeResponse'
   /api/random.{format}:
     get:
-      tags: ["base"]
-      summary: "generate a random mesh"
-      description: "generate a random mesh"
+      tags: ['base']
+      summary: 'generate a random mesh'
+      description: 'generate a random mesh'
       operationId: GenerateRandom
       parameters:
         - in: path
@@ -111,7 +111,7 @@ paths:
           description: maximum number of replicas per service
       responses:
         '200':
-          description: "OK"
+          description: 'OK'
           content:
             application/json:
               schema:
@@ -127,7 +127,7 @@ paths:
                 type: string
 
         '400':
-          description: "Bad request"
+          description: 'Bad request'
           content:
             application/json:
               schema:
@@ -188,7 +188,7 @@ paths:
               $ref: '#/components/schemas/MeshDefinition'
       responses:
         '200':
-          description: "OK"
+          description: 'OK'
           content:
             application/json:
               schema:
@@ -204,11 +204,32 @@ paths:
                 type: string
 
         '400':
-          description: "Bad request"
+          description: 'Bad request'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/catalog:
+    get:
+      responses:
+        '200':
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogResponse'
+        '500':
+          description: 'Bad request'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, schema]
+                properties:
+                  name:
+                    type: string
+                  schema:
+                    $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     ErrorResponse:
@@ -262,6 +283,24 @@ components:
           maxItems: 5000
           items:
             $ref: '#/components/schemas/ServiceEntry'
+    CatalogResponse:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+    CatalogItem:
+      type: object
+      required: ['title', 'description', 'definition']
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        definition:
+          $ref: '#/components/schemas/MeshDefinition'
     ServiceEntry:
       type: object
       required: [edges, replicas]
@@ -275,7 +314,7 @@ components:
           type: integer
     OutputFormat:
       type: string
-      enum: ["", "mmd", "gv", "yaml", "json"]
+      enum: ['', 'mmd', 'gv', 'yaml', 'json']
     K8sAppType:
       type: string
-      enum: ["api-play", "fake-service"]
+      enum: ['api-play', 'fake-service']

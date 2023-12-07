@@ -164,6 +164,7 @@
                             apiURL.pathname = '/api/define.mmd';
                         }
                         let payload = apiURL.searchParams.get('defineContent')
+                        apiURL.searchParams.delete('defineContent')
                         let success = await sendRequestAndPopulate(apiURL, payload, defineFormAlert, defineResponseContainer, asYaml ? ["yaml"] : ["mermaid"])
                         if (success) {
                             let k8sUrl = new URL(apiURL);
